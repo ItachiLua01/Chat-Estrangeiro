@@ -157,18 +157,19 @@ const RoomPage: NextPage = () => {
               />
             </div>
           )}
-<button
-  type="button"
-  className={styles.powerBtn}
-  onClick={() => {
-    const newState = !showPowerCard;
-    setShowPowerCard(newState);
-    socket?.emit("togglePowerCard", newState);
-  }}
->
-  {showPowerCard ? "Ocultar" : "Poder"}
-</button>   
-          )}
+          {isStranger && (
+            <button
+              type="button"
+              className={styles.powerBtn}
+              onClick={() => {
+                const newState = !showPowerCard;
+                setShowPowerCard(newState);
+                socket?.emit("togglePowerCard", newState);
+              }}
+            >
+              {showPowerCard ? "Ocultar" : "Poder"}
+            </button>
+          )}   
 
           {isStranger && showPowerCard && (
             <div className={styles.powerOverlay}>
