@@ -69,8 +69,8 @@ const RoomPage: NextPage = () => {
     io.on("clientMessage", (message: string) => {
       if (!isStranger) return;
       setClientMessage(message);
-      });   
-    
+    });
+
     io.on("togglePowerCard", (show: boolean) => {
       setShowPowerCard(show);
     });
@@ -169,11 +169,17 @@ const RoomPage: NextPage = () => {
             >
               {showPowerCard ? "Ocultar" : "Poder"}
             </button>
-          )}   
+          )}
 
-          {showPowerCard && (   
-            <div className={styles.powerOverlay}>
-              <div className={styles.powerCard}>
+          {showPowerCard && (
+            <div
+              className={styles.powerOverlay}
+              onClick={() => setShowPowerCard(false)}
+            >
+              <div
+                className={styles.powerCard}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <p className={styles.powerTitle}>PODER DE INTENÇÃO</p>
                 <img
                   src="/power-intention.png"
