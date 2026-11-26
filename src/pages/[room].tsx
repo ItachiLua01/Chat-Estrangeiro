@@ -69,6 +69,10 @@ const RoomPage: NextPage = () => {
     io.on("clientMessage", (message: string) => {
       if (!isStranger) return;
       setClientMessage(message);
+      });   
+    
+    io.on("togglePowerCard", (show: boolean) => {
+      setShowPowerCard(show);
     });
 
     return () => io.disconnect();
@@ -153,15 +157,17 @@ const RoomPage: NextPage = () => {
               />
             </div>
           )}
-
-          {isStranger && (
-            <button
-              type="button"
-              className={styles.powerBtn}
-              onClick={() => setShowPowerCard(!showPowerCard)}
-            >
-              {showPowerCard ? "Ocultar" : "Poder"}
-            </button>
+<button
+  type="button"
+  className={styles.powerBtn}
+  onClick={() => {
+    const newState = !showPowerCard;
+    setShowPowerCard(newState);
+    socket?.emit("togglePowerCard", newState);
+  }}
+>
+  {showPowerCard ? "Ocultar" : "Poder"}
+</button>   
           )}
 
           {isStranger && showPowerCard && (
