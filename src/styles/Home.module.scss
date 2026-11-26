@@ -45,4 +45,43 @@ section.main {
             cursor: not-allowed;
         }
     }
+
+    div.loginModal {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    row-gap: 12px;
+    align-items: center;
+
+    input {
+        text-align: center;
+        width: 200px;
+        padding: 10px;
+        color: var(--primary-color);
+        background-color: var(--background-color);
+        border: #C41E3A solid 1px;
+
+        &::placeholder {
+            color: var(--primary-color);
+        }
+    }
+
+    button {
+        padding: 5px 16px;
+        color: var(--primary-color);
+        background-color: transparent;
+        border: #C41E3A solid 1px;
+        cursor: pointer;
+    }
+}
+
+p.loginError {
+    color: #ff3333;
+    font-size: 14px;
+}
+
+p.loginHint {
+    color: var(--background-color);
+    font-size: 11px;
+}   
 }
