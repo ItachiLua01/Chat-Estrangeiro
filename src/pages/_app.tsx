@@ -11,7 +11,6 @@ export default function App({ Component, pageProps }: AppProps) {
         <link rel="shortcut icon" href="/favicon.ico" />
       </Head>
       <main className={styles.monitor}>
-        <section className={styles.monitor} />
         <section className={styles.scan} />
         <section className={styles.main}>
           <Component {...pageProps} />
