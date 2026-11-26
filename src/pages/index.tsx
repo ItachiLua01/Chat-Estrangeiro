@@ -33,12 +33,12 @@ const Home: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Entre numa sala</title>
+        <title>Hexatombe</title>
       </Head>
       <section className={styles.main}>
         <input
           type="text"
-          placeholder="Digite o código da sala"
+          placeholder="COMO SE CHAMA A COROA?"
           onChange={(event) => setRoom(event.target.value)}
           value={room}
           className="glow"
@@ -49,7 +49,7 @@ const Home: NextPage = () => {
           onClick={enterRoom}
           className="glow"
         >
-          Entrar como usuário
+          Começar o Ritual
         </button>
         <button
           type="button"
@@ -57,12 +57,8 @@ const Home: NextPage = () => {
           onClick={createRoom}
           className="glow"
         >
-          Entrar como o &quot;estrangeiro&quot;
+          Entrar como o &quot;Anjo Rubro&quot;
         </button>
-        <p className={styles.credits}>
-          Créditos e código fonte{" "}
-          <a href="https://github.com/wetrustinprize/estrangeiro-chat">aqui</a>
-        </p>
       </section>
     </>
   );
