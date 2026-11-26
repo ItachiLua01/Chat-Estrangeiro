@@ -171,7 +171,7 @@ const RoomPage: NextPage = () => {
             </button>
           )}   
 
-          {isStranger && showPowerCard && (
+          {showPowerCard && (   
             <div className={styles.powerOverlay}>
               <div className={styles.powerCard}>
                 <p className={styles.powerTitle}>PODER DE INTENÇÃO</p>
