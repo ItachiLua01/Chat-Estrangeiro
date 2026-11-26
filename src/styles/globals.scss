@@ -71,13 +71,13 @@ a {
 
 /* Firefox */
 * {
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scrollbar-color: #C41E3A #2a0000;
 }
 
 /* Chrome, Edge and Safari */
 *::-webkit-scrollbar {
-  width: 10px;
+  display: none;
 }
 
 *::-webkit-scrollbar-track {
