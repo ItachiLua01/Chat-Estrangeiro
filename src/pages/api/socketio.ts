@@ -13,7 +13,6 @@ export const config = {
 const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
   if (!res.socket.server.io) {
     console.log("New Socket.io server...");
-    // adapt Next's net Server to http Server
     const httpServer: NetServer = res.socket.server as any;
     const io = new ServerIO(httpServer, {
       path: "/api/socketio",
@@ -22,7 +21,7 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
     io.on("connection", (socket) => {
       const { room } = socket.request.headers;
 
-      console.log(`Client ${socket.id} connected to room \"${room}\"`);
+      console.log(`Client ${socket.id} connected to room "${room}"`);
       socket.join(room as string);
 
       socket.on("sendMessage", (message: Message) => {
@@ -32,12 +31,15 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
       socket.on("clientMessage", (message) => {
         io.to(room as string).emit("clientMessage", message);
       });
+
+      socket.on("togglePowerCard", (show: boolean) => {
+        io.to(room as string).emit("togglePowerCard", show);
+      });
     });
 
-    // append SocketIO server to Next.js socket server response
     res.socket.server.io = io;
   }
   res.end();
 };
 
-export default socketio;
+export default socketio;   
