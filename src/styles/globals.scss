@@ -80,21 +80,6 @@ a {
   display: none;
 }
 
-*::-webkit-scrollbar-track {
-  border-radius: 5px;
-  background-color: var(--background-color);
-}
-
-*::-webkit-scrollbar-thumb {
-  border-radius: 5px;
-  background-color: #C41E3A;
-
-  box-shadow: 0 0 10px 0 var(--glow-color);
-
-  &:hover {
-    background-color: #C41E3A;
-  }
-
   &:active {
 
     background-color: #C41E3A;
