@@ -212,6 +212,8 @@ div.powerOverlay {
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(60, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     animation: powerIn 0.4s ease-out;
 }
 
@@ -246,19 +248,15 @@ p.powerDesc {
     color: #f5e6e6;
     text-align: center;
     padding: 16px 24px;
-    background: rgba(26, 0, 0, 0.85);
-    border-radius: 4px;
-}
+}   
 
 @keyframes powerIn {
     0% {
         opacity: 0;
-        transform: scale(1.15);
-        filter: blur(8px);
+        backdrop-filter: blur(0px);
     }
     100% {
         opacity: 1;
-        transform: scale(1);
-        filter: blur(0px);
+        backdrop-filter: blur(8px);
     }
 }   
