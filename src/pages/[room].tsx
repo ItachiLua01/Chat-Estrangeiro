@@ -32,7 +32,7 @@ const RoomPage: NextPage = () => {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "F") {
+      if (e.ctrlKey && e.shiftKey && e.key === "Ç") {
         e.preventDefault();
         setShowLogin(true);
         setLoginUser("");
