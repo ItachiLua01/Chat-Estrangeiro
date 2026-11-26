@@ -8,17 +8,41 @@ import { Socket } from "socket.io-client";
 import styles from "../styles/Room.module.scss";
 import { Message } from "../types/message";
 
+const MASTER_USER = "DM";
+const MASTER_PASS = "DM";
+
 const RoomPage: NextPage = () => {
   const router = useRouter();
 
   const { room, stranger } = router.query;
-  const isStranger = !!stranger;
+  const [masterMode, setMasterMode] = useState(false);
+  const isStranger = !!stranger || masterMode;
+
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [error, setError] = useState(false);
 
   const [socket, setSocket] = useState<Socket | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
 
   const [clientMessage, setClientMessage] = useState<string>("");
   const [strangerMessage, setStrangerMessage] = useState<string>("");
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "M") {
+        e.preventDefault();
+        setShowLogin(true);
+        setLoginUser("");
+        setLoginPass("");
+        setError(false);
+      }
+      if (e.key === "Escape") setShowLogin(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect((): any => {
     if (!room || !router) return;
@@ -43,8 +67,17 @@ const RoomPage: NextPage = () => {
       setClientMessage(message);
     });
 
-    if (io) return () => io.disconnect();
-  }, [room, router, isStranger]);
+    return () => io.disconnect();
+  }, [room, router]);
+
+  const submitLogin = () => {
+    if (loginUser === MASTER_USER && loginPass === MASTER_PASS) {
+      setMasterMode(true);
+      setShowLogin(false);
+    } else {
+      setError(true);
+    }
+  };
 
   const sendMessage = async () => {
     if (isStranger ? !strangerMessage : !clientMessage) return;
@@ -55,16 +88,16 @@ const RoomPage: NextPage = () => {
       stranger: isStranger,
     } as Message);
 
-    setUserMessage("");
-  };
-
-  const setUserMessage = (newMessage: string) => {
     if (isStranger) {
       setStrangerMessage("");
     } else {
-      socket?.emit("clientMessage", newMessage);
-      setClientMessage(newMessage);
+      socket?.emit("clientMessage", clientMessage);
+      setClientMessage("");
     }
+  };
+
+  const setUserMessage = (newMessage: string) => {
+    setClientMessage(newMessage);
   };
 
   return (
@@ -99,7 +132,6 @@ const RoomPage: NextPage = () => {
               onKeyDown={(e) => {
                 if (e.key === "Enter") sendMessage();
               }}
-              onSubmit={sendMessage}
               className="text-glow"
             />
           </div>
@@ -117,10 +149,36 @@ const RoomPage: NextPage = () => {
               />
             </div>
           )}
+
+          {showLogin && (
+            <div className={styles.loginModal}>
+              <input
+                type="text"
+                placeholder="Usuário"
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
+                className="glow"
+                autoFocus
+              />
+              <input
+                type="password"
+                placeholder="Senha"
+                value={loginPass}
+                onChange={(e) => setLoginPass(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitLogin()}
+                className="glow"
+              />
+              <button type="button" onClick={submitLogin} className="glow">
+                Entrar
+              </button>
+              {error && <p className={styles.loginError}>Acesso negado</p>}
+              <p className={styles.loginHint}></p>
+            </div>
+          )}
         </section>
       )}
     </>
   );
 };
 
-export default RoomPage;
+export default RoomPage;   
