@@ -70,7 +70,7 @@ const RoomPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Sala</title>
+        <title>Hexatombe</title>
       </Head>
       {!socket ? (
         <div className={styles.connecting}>
