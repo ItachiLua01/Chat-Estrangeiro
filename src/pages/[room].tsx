@@ -22,6 +22,7 @@ const RoomPage: NextPage = () => {
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [error, setError] = useState(false);
+  const [showPowerCard, setShowPowerCard] = useState(false);
 
   const [socket, setSocket] = useState<Socket | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -38,7 +39,10 @@ const RoomPage: NextPage = () => {
         setLoginPass("");
         setError(false);
       }
-      if (e.key === "Escape") setShowLogin(false);
+      if (e.key === "Escape") {
+        setShowLogin(false);
+        setShowPowerCard(false);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -147,6 +151,36 @@ const RoomPage: NextPage = () => {
                   if (e.key === "Enter") sendMessage();
                 }}
               />
+            </div>
+          )}
+
+          {isStranger && (
+            <button
+              type="button"
+              className={styles.powerBtn}
+              onClick={() => setShowPowerCard(!showPowerCard)}
+            >
+              {showPowerCard ? "Ocultar" : "Poder"}
+            </button>
+          )}
+
+          {isStranger && showPowerCard && (
+            <div className={styles.powerOverlay}>
+              <div className={styles.powerCard}>
+                <p className={styles.powerTitle}>PODER DE INTENÇÃO</p>
+                <img
+                  src="/power-intention.png"
+                  alt="Intenção"
+                  className={styles.powerImage}
+                />
+                <p className={styles.powerDesc}>
+                  REAÇÃO Se Juan obedecer a Ele, ao fazer um teste, em vez de
+                  rolar os dados, Juan pode determinar que seja um sucesso
+                  automático (como se tivesse rolado 20 natural). Juan pode
+                  fazer isso apenas uma vez por cena e precisa fazê-lo na mesma
+                  cena em que obedeceu uma vontade d'Ele.
+                </p>
+              </div>
             </div>
           )}
 
