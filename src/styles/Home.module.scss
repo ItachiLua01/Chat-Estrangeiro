@@ -7,15 +7,6 @@ section.main {
     justify-content: center;
     row-gap: 24px;
 
-    p.credits {
-        color: var(--primary-color);
-
-        >a {
-            text-decoration: underline;
-            cursor: pointer;
-        }
-    }
-
     input {
         text-align: center;
         width: 200px;
