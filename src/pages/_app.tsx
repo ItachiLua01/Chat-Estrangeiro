@@ -35,10 +35,16 @@ export default function App({ Component, pageProps }: AppProps) {
 
     window.addEventListener("hexatombe-duck-audio", handleDuck);
 
+    // Ping a cada 5 minutos para evitar hibernação no plano gratuito do Render
+    const keepAliveTimer = setInterval(() => {
+      fetch("/api/health", { cache: "no-store" }).catch(() => {});
+    }, 5 * 60 * 1000);
+
     return () => {
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);
       window.removeEventListener("hexatombe-duck-audio", handleDuck);
+      clearInterval(keepAliveTimer);
       audio.pause();
     };
   }, []);
