@@ -1,68 +1,58 @@
 main.monitor {
     position: relative;
 
-    $mainW: 80vw;
-    $mainH: $mainW * 0.7;
-
     background-color: #0a0000;
     background-image: url("../../public/background.png");
     background-size: cover;
     background-position: center;
 
-    width: $mainW;
-    height: min(100vh * 0.95, $mainH);
+    width: min(92vw, 1800px);
+    height: min(94dvh, 1080px);
+    overflow: hidden;
+    border-radius: 6px;
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
         width: 100vw;
-        height: 100vh;
+        height: 100dvh;
+        border-radius: 0;
     }
 
     section.main {
-        padding: 48px;
+        padding: clamp(14px, 3vw, 48px);
         height: 100%;
-
-        @media (max-width: 768px) {
-            padding: 24px;
-        }
     }
 
     section.scan {
         position: absolute;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         z-index: 1;
         pointer-events: none;
         opacity: 0;
         background: radial-gradient(
             ellipse at center,
-            rgba(200, 30, 30, 0.4) 0%,
-            rgba(139, 0, 0, 0.2) 50%,
-            transparent 80%
+            transparent 48%,
+            rgba(180, 15, 25, 0.25) 85%,
+            rgba(100, 0, 0, 0.45) 100%
         );
-        backdrop-filter: blur(0px);
-        animation: bloodZoom 30s linear infinite;
+        animation: bloodZoom 16s ease-in-out infinite;
     }
 }
 
 @keyframes bloodZoom {
-    0%, 88% {
+    0%, 78% {
         opacity: 0;
         transform: scale(1);
-        backdrop-filter: blur(0px);
     }
-    90% {
-        opacity: 1;
-        transform: scale(1.12);
-        backdrop-filter: blur(6px);
+    86% {
+        opacity: 0.75;
+        transform: scale(1.04);
     }
-    93% {
-        opacity: 1;
-        transform: scale(1.08);
-        backdrop-filter: blur(3px);
+    92% {
+        opacity: 0.45;
+        transform: scale(1.02);
     }
-    95%, 100% {
+    100% {
         opacity: 0;
         transform: scale(1);
-        backdrop-filter: blur(0px);
     }
-}   
+}
