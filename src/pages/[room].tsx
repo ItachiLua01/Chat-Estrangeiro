@@ -50,43 +50,14 @@ const CARDS: Record<CardId, CardDefinition> = {
   },
 };
 
-function playBellSound() {
-  const audio = new Audio("/sino.mp3");
-  audio.volume = 0.85;
-  audio.play().catch(() => {
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      const ctx = new AudioCtx();
-      const now = ctx.currentTime;
-      const freqs = [110, 220, 277.18, 440, 659.25];
-      freqs.forEach((f, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = idx === 0 ? "triangle" : "sine";
-        osc.frequency.setValueAtTime(f, now);
-        gain.gain.setValueAtTime(0.18 / (idx + 1), now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.4);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 2.5);
-      });
-    } catch {
-      // Silencioso se o navegador bloquear áudio
-    }
-  });
-}
-
 interface MessageRowProps {
   msg: Message;
   animate: boolean;
+  isMaster: boolean;
   onTick?: () => void;
 }
 
-const MessageRow = ({ msg, animate, onTick }: MessageRowProps) => {
+const MessageRow = ({ msg, animate, isMaster, onTick }: MessageRowProps) => {
   const [displayed, setDisplayed] = useState(animate ? "" : msg.message);
   const [doneTyping, setDoneTyping] = useState(!animate);
   const [mutated, setMutated] = useState(false);
@@ -134,10 +105,11 @@ const MessageRow = ({ msg, animate, onTick }: MessageRowProps) => {
   }, [doneTyping, msg.ephemeral]);
 
   if (vanished) {
+    if (!isMaster) return null;
     return (
       <div className={`${styles.stranger} ${styles.vanishedMessage}`}>
         <p />
-        <p>[sussurro dissipado]</p>
+        <p>[sussurro dissipado] - {msg.message}</p>
       </div>
     );
   }
@@ -155,6 +127,13 @@ const MessageRow = ({ msg, animate, onTick }: MessageRowProps) => {
     </div>
   );
 };
+
+interface ChoiceLog {
+  room: string;
+  prompt: string;
+  chosen: string;
+  timestamp: number;
+}
 
 const RoomPage: NextPage = () => {
   const router = useRouter();
@@ -174,12 +153,18 @@ const RoomPage: NextPage = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [liveTyping, setLiveTyping] = useState("");
   const [invasionActive, setInvasionActive] = useState(false);
+  const [invasionShaking, setInvasionShaking] = useState(false);
   const [showMoldura, setShowMoldura] = useState(false);
   const hasScreamedRef = useRef(false);
+
+  const bellAudioRef = useRef<HTMLAudioElement | null>(null);
+  const bellSynthCtxRef = useRef<AudioContext | null>(null);
+  const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [socket, setSocket] = useState<Socket | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
+  const [choiceLogs, setChoiceLogs] = useState<ChoiceLog[]>([]);
 
   const [clientMessage, setClientMessage] = useState("");
   const [strangerMessage, setStrangerMessage] = useState("");
@@ -208,7 +193,81 @@ const RoomPage: NextPage = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, liveTyping, activeChoice]);
+  }, [messages, liveTyping, activeChoice, choiceLogs]);
+
+  const stopBellAndInvasion = () => {
+    if (shakeTimerRef.current) {
+      clearTimeout(shakeTimerRef.current);
+      shakeTimerRef.current = null;
+    }
+    if (bellAudioRef.current) {
+      bellAudioRef.current.pause();
+      bellAudioRef.current.currentTime = 0;
+      bellAudioRef.current = null;
+    }
+    if (bellSynthCtxRef.current) {
+      bellSynthCtxRef.current.close().catch(() => {});
+      bellSynthCtxRef.current = null;
+    }
+    setInvasionShaking(false);
+    setInvasionActive(false);
+  };
+
+  const startBellAndInvasion = () => {
+    stopBellAndInvasion();
+    setInvasionActive(true);
+    setInvasionShaking(true);
+
+    shakeTimerRef.current = setTimeout(() => {
+      setInvasionShaking(false);
+    }, 2600);
+
+    const audio = new Audio("/sino.mp3");
+    audio.volume = 0.85;
+    bellAudioRef.current = audio;
+
+    audio.addEventListener(
+      "ended",
+      () => {
+        setInvasionActive(false);
+        setInvasionShaking(false);
+        bellAudioRef.current = null;
+      },
+      { once: true }
+    );
+
+    audio.play().catch(() => {
+      try {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
+        const ctx = new AudioCtx();
+        bellSynthCtxRef.current = ctx;
+        const now = ctx.currentTime;
+        const freqs = [110, 220, 277.18, 440, 659.25];
+        freqs.forEach((f, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = idx === 0 ? "triangle" : "sine";
+          osc.frequency.setValueAtTime(f, now);
+          gain.gain.setValueAtTime(0.18 / (idx + 1), now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 2.5);
+        });
+        setTimeout(() => {
+          setInvasionActive(false);
+        }, 2500);
+      } catch {
+        setTimeout(() => {
+          setInvasionActive(false);
+        }, 2500);
+      }
+    });
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -260,6 +319,7 @@ const RoomPage: NextPage = () => {
     setRoomInput(roomStr);
     hasScreamedRef.current = false;
     setAnimatedIds(new Set());
+    stopBellAndInvasion();
 
     const io = SocketIOClient({
       path: "/api/socketio",
@@ -313,9 +373,11 @@ const RoomPage: NextPage = () => {
     });
 
     io.on("triggerInvasion", () => {
-      setInvasionActive(true);
-      playBellSound();
-      setTimeout(() => setInvasionActive(false), 2600);
+      startBellAndInvasion();
+    });
+
+    io.on("stopInvasion", () => {
+      stopBellAndInvasion();
     });
 
     io.on("resetFirstScream", () => {
@@ -326,7 +388,13 @@ const RoomPage: NextPage = () => {
       setActiveChoice(choice);
     });
 
+    io.on("choiceResult", (log: ChoiceLog) => {
+      if (!isStrangerRef.current) return;
+      setChoiceLogs((prev) => [...prev, log]);
+    });
+
     return () => {
+      stopBellAndInvasion();
       io.disconnect();
       setSocket(undefined);
     };
@@ -421,13 +489,15 @@ const RoomPage: NextPage = () => {
 
   const handleToggleMutateHelper = () => {
     if (!strangerMessage.includes("||")) {
-      setStrangerMessage((prev) => (prev ? `${prev} || ` : "texto inicial || texto alterado"));
+      setStrangerMessage((prev) =>
+        prev ? `${prev} || ` : "texto inicial || texto alterado"
+      );
     }
     setMutateMode((prev) => !prev);
     strangerInputRef.current?.focus();
   };
 
-  const handleSendChoice = () => {
+  const handleSendChoice = (allRooms = false) => {
     if (!choicePromptInput.trim()) return;
     const choice: ChoicePrompt = {
       id: `${Date.now()}`,
@@ -437,7 +507,11 @@ const RoomPage: NextPage = () => {
       seconds: Math.max(5, Math.min(120, Number(choiceSeconds) || 15)),
       createdAt: Date.now(),
     };
-    socket?.emit("sendChoice", choice);
+    if (allRooms) {
+      socket?.emit("sendChoiceAll", choice);
+    } else {
+      socket?.emit("sendChoice", choice);
+    }
     setShowChoiceBuilder(false);
     setChoicePromptInput("");
   };
@@ -454,6 +528,16 @@ const RoomPage: NextPage = () => {
     router.push(`/${clean}${stranger ? "?stranger=1" : ""}`);
   };
 
+  const handleDeleteRoom = (targetRoom: string) => {
+    socket?.emit("deleteRoom", targetRoom);
+    if (targetRoom === room) {
+      const fallback = knownRooms.find((r) => r !== targetRoom) || "intencao";
+      if (fallback !== targetRoom) {
+        switchRoom(fallback);
+      }
+    }
+  };
+
   const currentCard = activeCard ? CARDS[activeCard] : null;
 
   return (
@@ -462,7 +546,7 @@ const RoomPage: NextPage = () => {
         <title>Hexatombe</title>
       </Head>
 
-      {invasionActive && <div className={styles.invasionFlash} />}
+      {invasionShaking && <div className={styles.invasionFlash} />}
       {showMoldura && (
         <div className={styles.molduraOverlay}>
           <img src="/moldura.png" alt="" className={styles.molduraImg} />
@@ -476,7 +560,7 @@ const RoomPage: NextPage = () => {
       ) : (
         <section
           className={`${styles.program} ${
-            invasionActive ? styles.screenShake : ""
+            invasionShaking ? styles.screenShake : ""
           }`}
         >
           {isStranger && (
@@ -486,16 +570,31 @@ const RoomPage: NextPage = () => {
                 {Array.from(
                   new Set([...knownRooms, String(room || "intencao")])
                 ).map((r) => (
-                  <button
+                  <div
                     key={r}
-                    type="button"
-                    className={`${styles.roomChip} ${
+                    className={`${styles.roomChipWrap} ${
                       r === room ? styles.roomChipActive : ""
                     }`}
-                    onClick={() => switchRoom(r)}
                   >
-                    {r}
-                  </button>
+                    <button
+                      type="button"
+                      className={styles.roomChipBtn}
+                      onClick={() => switchRoom(r)}
+                    >
+                      {r}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.roomDeleteBtn}
+                      title={`Apagar sala ${r}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteRoom(r);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
               </div>
               <div className={styles.roomSwitchForm}>
@@ -519,9 +618,23 @@ const RoomPage: NextPage = () => {
                 key={message.id}
                 msg={message}
                 animate={animatedIds.has(message.id)}
+                isMaster={isStranger}
                 onTick={scrollToBottom}
               />
             ))}
+
+            {isStranger &&
+              choiceLogs.map((log, i) => (
+                <div
+                  key={`${log.timestamp}-${i}`}
+                  className={styles.masterChoiceLog}
+                >
+                  <p>[IMPULSO · {log.room}]</p>
+                  <p>
+                    &ldquo;{log.prompt}&rdquo; → {log.chosen}
+                  </p>
+                </div>
+              ))}
 
             {isStranger && liveTyping && (
               <div className={`${styles.client} ${styles.liveTypingPreview}`}>
@@ -536,7 +649,6 @@ const RoomPage: NextPage = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Caixa do jogador: oculta quando travada para o jogador */}
           {(!isLocked || isStranger) && (
             <div
               className={`${styles.clientInput} ${
@@ -599,8 +711,11 @@ const RoomPage: NextPage = () => {
                       onChange={(e) => setChoiceSeconds(Number(e.target.value))}
                       title="Segundos"
                     />
-                    <button type="button" onClick={handleSendChoice}>
-                      Enviar
+                    <button type="button" onClick={() => handleSendChoice(false)}>
+                      Enviar Sala
+                    </button>
+                    <button type="button" onClick={() => handleSendChoice(true)}>
+                      Todas Salas
                     </button>
                   </div>
                 </div>
@@ -679,10 +794,16 @@ const RoomPage: NextPage = () => {
                   </button>
                   <button
                     type="button"
-                    className={styles.ctrlBtn}
-                    onClick={() => socket?.emit("triggerInvasion")}
+                    className={`${styles.ctrlBtn} ${
+                      invasionActive ? styles.ctrlBtnActive : ""
+                    }`}
+                    onClick={() =>
+                      socket?.emit(
+                        invasionActive ? "stopInvasion" : "triggerInvasion"
+                      )
+                    }
                   >
-                    Sino / Invasão
+                    {invasionActive ? "Parar Sino" : "Sino / Invasão"}
                   </button>
                   <button
                     type="button"
@@ -712,7 +833,10 @@ const RoomPage: NextPage = () => {
                   <button
                     type="button"
                     className={styles.ctrlBtn}
-                    onClick={() => socket?.emit("clearRoom")}
+                    onClick={() => {
+                      socket?.emit("clearRoom");
+                      setChoiceLogs([]);
+                    }}
                   >
                     Limpar
                   </button>
@@ -759,9 +883,7 @@ const RoomPage: NextPage = () => {
           {activeChoice && (
             <div className={styles.choiceOverlay}>
               <div className={styles.choiceModal}>
-                <p className={styles.choiceTimer}>
-                  {choiceRemaining}s
-                </p>
+                <p className={styles.choiceTimer}>{choiceRemaining}s</p>
                 <p className={styles.choicePromptText}>{activeChoice.prompt}</p>
                 <div className={styles.choiceBarTrack}>
                   <div
@@ -808,7 +930,10 @@ const RoomPage: NextPage = () => {
           )}
 
           {showLogin && (
-            <div className={styles.loginOverlay} onClick={() => setShowLogin(false)}>
+            <div
+              className={styles.loginOverlay}
+              onClick={() => setShowLogin(false)}
+            >
               <div
                 className={styles.loginModal}
                 onClick={(e) => e.stopPropagation()}

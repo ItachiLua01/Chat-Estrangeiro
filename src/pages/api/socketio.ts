@@ -48,10 +48,9 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
       console.log(`Client ${socket.id} connected to room "${room}"`);
       socket.join(room);
 
-      // Envia histórico e estado atual da sala ao conectar (resolve perda no F5)
       const state = getOrCreateRoom(room);
       socket.emit("roomState", state);
-      socket.emit("roomsList", Array.from(roomsStore.keys()));
+      io.emit("roomsList", Array.from(roomsStore.keys()));
 
       socket.on("sendMessage", (incoming: Message) => {
         const targetRoom = incoming.room || room;
@@ -64,7 +63,6 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
           timestamp: incoming.timestamp || Date.now(),
         };
 
-        // Mensagens efêmeras não ficam salvas no histórico permanente
         if (!msg.ephemeral) {
           roomState.messages.push(msg);
           if (roomState.messages.length > MAX_MESSAGES_PER_ROOM) {
@@ -115,6 +113,10 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         io.to(room).emit("triggerInvasion");
       });
 
+      socket.on("stopInvasion", () => {
+        io.to(room).emit("stopInvasion");
+      });
+
       socket.on("resetFirstScream", () => {
         io.to(room).emit("resetFirstScream");
       });
@@ -123,6 +125,15 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         const roomState = getOrCreateRoom(room);
         roomState.activeChoice = choice;
         io.to(room).emit("activeChoice", choice);
+      });
+
+      socket.on("sendChoiceAll", (choice: ChoicePrompt) => {
+        const allRooms = Array.from(roomsStore.keys());
+        allRooms.forEach((targetRoom) => {
+          const roomState = getOrCreateRoom(targetRoom);
+          roomState.activeChoice = choice;
+          io.to(targetRoom).emit("activeChoice", choice);
+        });
       });
 
       socket.on("resolveChoice", (payload: { choiceId: string; chosen: string }) => {
@@ -134,15 +145,13 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         roomState.activeChoice = null;
         io.to(room).emit("activeChoice", null);
 
-        const resultMsg: Message = {
-          id: `${Date.now()}-choice`,
-          message: `[${promptTitle}] → ${payload.chosen}`,
-          stranger: false,
+        // Envia o resultado apenas para o Mestre (não entra no chat do jogador)
+        io.emit("choiceResult", {
           room,
+          prompt: promptTitle,
+          chosen: payload.chosen,
           timestamp: Date.now(),
-        };
-        roomState.messages.push(resultMsg);
-        io.to(room).emit("message", resultMsg);
+        });
       });
 
       socket.on("clearRoom", () => {
@@ -150,6 +159,11 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         roomState.messages = [];
         roomState.activeChoice = null;
         io.to(room).emit("roomState", roomState);
+      });
+
+      socket.on("deleteRoom", (targetRoom: string) => {
+        roomsStore.delete(targetRoom);
+        io.emit("roomsList", Array.from(roomsStore.keys()));
       });
 
       socket.on("requestRoomsList", () => {
