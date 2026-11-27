@@ -603,8 +603,9 @@ div.molduraOverlay {
 img.molduraImg {
     width: 100vw;
     height: 100dvh;
-    object-fit: cover;
-    filter: drop-shadow(0 0 24px rgba(255, 0, 0, 0.85));
+    object-fit: fill;
+    transform: scale(-1.06, -1.06);
+    filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.85));
 }
 
 @keyframes molduraPulse {
