@@ -22,11 +22,15 @@ globalForRooms.hexatombeRooms = roomsStore;
 
 function getOrCreateRoom(roomName: string): RoomState {
   const existing = roomsStore.get(roomName);
-  if (existing) return existing;
+  if (existing) {
+    if (!existing.unlockedCards) existing.unlockedCards = [];
+    return existing;
+  }
   const fresh: RoomState = {
     messages: [],
     locked: false,
     activeCard: null,
+    unlockedCards: [],
     activeChoice: null,
   };
   roomsStore.set(roomName, fresh);
@@ -106,6 +110,10 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
       socket.on("showCard", (cardId: CardId | null) => {
         const roomState = getOrCreateRoom(room);
         roomState.activeCard = cardId;
+        if (cardId && !roomState.unlockedCards.includes(cardId)) {
+          roomState.unlockedCards.push(cardId);
+          io.to(room).emit("unlockedCards", roomState.unlockedCards);
+        }
         io.to(room).emit("activeCard", cardId);
       });
 
@@ -149,7 +157,6 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         roomState.activeChoice = null;
         io.to(room).emit("activeChoice", null);
 
-        // Envia o resultado apenas para o Mestre (não entra no chat do jogador)
         io.emit("choiceResult", {
           room,
           prompt: promptTitle,

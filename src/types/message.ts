@@ -23,5 +23,6 @@ export interface RoomState {
   messages: Message[];
   locked: boolean;
   activeCard: CardId | null;
+  unlockedCards: CardId[];
   activeChoice: ChoicePrompt | null;
 }

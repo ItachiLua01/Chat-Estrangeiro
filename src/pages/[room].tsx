@@ -150,6 +150,10 @@ const RoomPage: NextPage = () => {
   const [error, setError] = useState(false);
 
   const [activeCard, setActiveCard] = useState<CardId | null>(null);
+  const [unlockedCards, setUnlockedCards] = useState<CardId[]>([]);
+  const [showKnowledgeIndex, setShowKnowledgeIndex] = useState(false);
+  const [localPreviewCard, setLocalPreviewCard] = useState<CardId | null>(null);
+
   const [isLocked, setIsLocked] = useState(false);
   const [liveTyping, setLiveTyping] = useState("");
   const [invasionActive, setInvasionActive] = useState(false);
@@ -160,6 +164,10 @@ const RoomPage: NextPage = () => {
   const bellAudioRef = useRef<HTMLAudioElement | null>(null);
   const bellSynthCtxRef = useRef<AudioContext | null>(null);
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Gesto secreto de 5 toques no canto superior esquerdo para abrir login no celular/tablet
+  const secretTapCountRef = useRef(0);
+  const secretTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [socket, setSocket] = useState<Socket | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -180,10 +188,11 @@ const RoomPage: NextPage = () => {
   const [activeChoice, setActiveChoice] = useState<ChoicePrompt | null>(null);
   const [choiceRemaining, setChoiceRemaining] = useState(0);
 
-  // Salas para o mestre alternar sem abrir várias abas
+  // Salas e controle manual da Lua de Sangue
   const [knownRooms, setKnownRooms] = useState<string[]>([]);
   const [roomInput, setRoomInput] = useState("");
-  const [moonCount, setMoonCount] = useState(6);
+  const [moonFrom, setMoonFrom] = useState("6");
+  const [moonTo, setMoonTo] = useState("5");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const strangerInputRef = useRef<HTMLInputElement | null>(null);
@@ -195,6 +204,24 @@ const RoomPage: NextPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, liveTyping, activeChoice, choiceLogs]);
+
+  const handleSecretTap = () => {
+    secretTapCountRef.current += 1;
+    if (secretTapTimerRef.current) clearTimeout(secretTapTimerRef.current);
+
+    if (secretTapCountRef.current >= 5) {
+      secretTapCountRef.current = 0;
+      setShowLogin(true);
+      setLoginUser("");
+      setLoginPass("");
+      setError(false);
+      return;
+    }
+
+    secretTapTimerRef.current = setTimeout(() => {
+      secretTapCountRef.current = 0;
+    }, 1800);
+  };
 
   const stopBellAndInvasion = () => {
     if (shakeTimerRef.current) {
@@ -282,6 +309,8 @@ const RoomPage: NextPage = () => {
       if (e.key === "Escape") {
         setShowLogin(false);
         setActiveCard(null);
+        setLocalPreviewCard(null);
+        setShowKnowledgeIndex(false);
       }
     };
     window.addEventListener("keydown", handler);
@@ -338,6 +367,7 @@ const RoomPage: NextPage = () => {
       setMessages(state.messages || []);
       setIsLocked(!!state.locked);
       setActiveCard(state.activeCard || null);
+      setUnlockedCards(state.unlockedCards || []);
       setActiveChoice(state.activeChoice || null);
       setLiveTyping("");
     });
@@ -371,6 +401,10 @@ const RoomPage: NextPage = () => {
 
     io.on("activeCard", (cardId: CardId | null) => {
       setActiveCard(cardId);
+    });
+
+    io.on("unlockedCards", (cards: CardId[]) => {
+      setUnlockedCards(cards);
     });
 
     io.on("triggerInvasion", () => {
@@ -523,6 +557,17 @@ const RoomPage: NextPage = () => {
     socket?.emit("showCard", next);
   };
 
+  const handleTriggerBloodMoon = () => {
+    const fromVal = moonFrom.trim() || "6";
+    const toVal = moonTo.trim() || "5";
+    socket?.emit("triggerBloodMoon", { from: fromVal, to: toVal });
+    const numericTo = parseInt(toVal, 10);
+    if (!Number.isNaN(numericTo)) {
+      setMoonFrom(String(numericTo));
+      setMoonTo(String(Math.max(0, numericTo - 1)));
+    }
+  };
+
   const switchRoom = (target: string) => {
     const clean = target.trim().toLowerCase().replace(/\s+/g, "-");
     if (!clean) return;
@@ -539,13 +584,21 @@ const RoomPage: NextPage = () => {
     }
   };
 
-  const currentCard = activeCard ? CARDS[activeCard] : null;
+  const displayedCardId = localPreviewCard || activeCard;
+  const currentCard = displayedCardId ? CARDS[displayedCardId] : null;
 
   return (
     <>
       <Head>
         <title>Hexatombe</title>
       </Head>
+
+      {/* Área secreta no canto superior esquerdo: 5 toques rápidos abrem login no mobile/tablet */}
+      <div
+        className={styles.secretLoginTouch}
+        onClick={handleSecretTap}
+        aria-hidden="true"
+      />
 
       {invasionShaking && <div className={styles.invasionFlash} />}
       {showMoldura && (
@@ -556,6 +609,11 @@ const RoomPage: NextPage = () => {
 
       {!socket ? (
         <div className={styles.connecting}>
+          <img
+            src="/hexatombe-sigil.png"
+            alt="Hexatombe"
+            className={styles.connectingSigil}
+          />
           <p className="text-glow">Conectando</p>
         </div>
       ) : (
@@ -564,6 +622,19 @@ const RoomPage: NextPage = () => {
             invasionShaking ? styles.screenShake : ""
           }`}
         >
+          {/* Botão discreto de Conhecimento (dourado) para o Índice de Poderes */}
+          <button
+            type="button"
+            className={styles.knowledgeBtn}
+            title="Índice de Conhecimento"
+            onClick={() => setShowKnowledgeIndex(true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+              <path d="M12 4C6.5 4 2.2 8 1 12c1.2 4 5.5 8 11 8s9.8-4 11-8c-1.2-4-5.5-8-11-8Z" />
+              <circle cx="12" cy="12" r="3.2" />
+            </svg>
+          </button>
+
           {isStranger && (
             <div className={styles.masterTopBar}>
               <span className={styles.masterTag}>MESTRE · SALA: {room}</span>
@@ -823,21 +894,31 @@ const RoomPage: NextPage = () => {
                   >
                     Todas Salas
                   </button>
-                  <button
-                    type="button"
-                    className={styles.ctrlBtn}
-                    onClick={() => {
-                      const next = Math.max(0, moonCount - 1);
-                      socket?.emit("triggerBloodMoon", {
-                        from: String(moonCount),
-                        to: String(next),
-                      });
-                      setMoonCount(next);
-                    }}
-                    title="Disparar overlay da Lua de Sangue nos tablets Android"
-                  >
-                    Lua ({moonCount}→{Math.max(0, moonCount - 1)})
-                  </button>
+                  <div className={styles.moonManualWrap}>
+                    <input
+                      type="text"
+                      value={moonFrom}
+                      onChange={(e) => setMoonFrom(e.target.value)}
+                      className={styles.moonNumInput}
+                      title="Número inicial da Lua"
+                    />
+                    <span>→</span>
+                    <input
+                      type="text"
+                      value={moonTo}
+                      onChange={(e) => setMoonTo(e.target.value)}
+                      className={styles.moonNumInput}
+                      title="Novo número da Lua"
+                    />
+                    <button
+                      type="button"
+                      className={styles.ctrlBtn}
+                      onClick={handleTriggerBloodMoon}
+                      title="Disparar overlay da Lua de Sangue nos tablets Android"
+                    >
+                      Lua
+                    </button>
+                  </div>
                   <button
                     type="button"
                     className={styles.ctrlBtn}
@@ -861,12 +942,68 @@ const RoomPage: NextPage = () => {
             </div>
           )}
 
+          {/* Índice de Conhecimento (cartas descobertas e bloqueadas) */}
+          {showKnowledgeIndex && (
+            <div
+              className={styles.indexOverlay}
+              onClick={() => setShowKnowledgeIndex(false)}
+            >
+              <div
+                className={styles.indexModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className={styles.indexTitle}>ÍNDICE DE CONHECIMENTO</p>
+                <div className={styles.indexGrid}>
+                  {(Object.keys(CARDS) as CardId[]).map((cid) => {
+                    const unlocked = isStranger || unlockedCards.includes(cid);
+                    const card = CARDS[cid];
+                    return unlocked ? (
+                      <button
+                        key={cid}
+                        type="button"
+                        className={styles.indexCardUnlocked}
+                        onClick={() => {
+                          setShowKnowledgeIndex(false);
+                          setLocalPreviewCard(cid);
+                        }}
+                      >
+                        <img
+                          src={card.image || "/hexatombe-sigil.png"}
+                          alt={card.title}
+                          className={styles.indexCardThumb}
+                        />
+                        <span className={styles.indexCardName}>{card.title}</span>
+                      </button>
+                    ) : (
+                      <div key={cid} className={styles.indexCardLocked}>
+                        <img
+                          src={card.image || "/hexatombe-sigil.png"}
+                          alt=""
+                          className={styles.indexCardSilhouette}
+                        />
+                        <span className={styles.indexQuestion}>?</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className={styles.closeCardBtn}
+                  onClick={() => setShowKnowledgeIndex(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+
           {currentCard && (
             <div
               className={styles.powerOverlay}
               onClick={() => {
+                setLocalPreviewCard(null);
                 setActiveCard(null);
-                if (isStranger) socket?.emit("showCard", null);
+                if (isStranger && activeCard) socket?.emit("showCard", null);
               }}
             >
               <div
@@ -886,8 +1023,9 @@ const RoomPage: NextPage = () => {
                   type="button"
                   className={styles.closeCardBtn}
                   onClick={() => {
+                    setLocalPreviewCard(null);
                     setActiveCard(null);
-                    if (isStranger) socket?.emit("showCard", null);
+                    if (isStranger && activeCard) socket?.emit("showCard", null);
                   }}
                 >
                   Fechar
