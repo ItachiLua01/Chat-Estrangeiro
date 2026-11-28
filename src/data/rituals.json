@@ -1,0 +1,183 @@
+[
+  {
+    "name": "Passagem de Conhecimento Expandido",
+    "element": "Sangue",
+    "secondaryElement": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Troca e substituição simultânea de mentes entre até 10 pessoas, podendo tornar corpos inertes em Anulados."
+  },
+  {
+    "name": "Rajada Caótica",
+    "element": "Energia",
+    "season": "Hexatombe",
+    "description": "Dispara um raio caótico de Energia que causa 8d8 pontos de dano de Energia em um ser em alcance médio."
+  },
+  {
+    "name": "Tempestade Caótica",
+    "element": "Energia",
+    "season": "Hexatombe",
+    "description": "Versão aprimorada de Rajada Caótica que dispara raios causando 8d10 pontos de dano de Energia em alcance médio."
+  },
+  {
+    "name": "Labirinto Mental",
+    "element": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Obriga o alvo a gastar suas ações movendo-se em uma direção aleatória por 1d4 rodadas."
+  },
+  {
+    "name": "Labirinto Abissal",
+    "element": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Versão aprimorada que obriga o alvo a gastar suas ações movendo-se na direção escolhida pelo conjurador por 1d4 rodadas."
+  },
+  {
+    "name": "Mapa Sanguíneo",
+    "element": "Sangue",
+    "secondaryElement": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Desenha um mapa no chão sinalizando em tempo real a localização de todos os seres em um raio de 1 quilômetro."
+  },
+  {
+    "name": "Revelação Sanguínea",
+    "element": "Sangue",
+    "secondaryElement": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Sinaliza localização, intenção geral e condições de saúde de todos os seres em um raio de 1 km até o fim da cena."
+  },
+  {
+    "name": "Armadura de Sangue Diabólica",
+    "element": "Sangue",
+    "season": "Hexatombe",
+    "description": "Conjura uma armadura de sangue imbuída com Intenção, concedendo +5 de Defesa (+10 contra o primeiro golpe ao aprimorar)."
+  },
+  {
+    "name": "Capturar Momento",
+    "element": "Morte",
+    "secondaryElement": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Marca uma área com espirais de lodo preto, permitindo ver imagens e captar sons próximos ao símbolo."
+  },
+  {
+    "name": "Consumir Momento",
+    "element": "Morte",
+    "secondaryElement": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Ativa os símbolos marcados anteriormente para gerar uma explosão de Morte em área."
+  },
+  {
+    "name": "Esfolar",
+    "element": "Sangue",
+    "season": "Hexatombe",
+    "description": "Quando o objeto ou corpo marcado é tocado, explode lançando lâminas em 3 metros, causando dano de corte e sangramento (Fortitude reduz à metade)."
+  },
+  {
+    "name": "Proteção Sigilosa",
+    "element": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Reveste uma área ou objeto com sigilos dourados de proteção; dissipa-se caso o conjurador morra."
+  },
+  {
+    "name": "Olhar da Curiosidade Mórbida",
+    "element": "Conhecimento",
+    "season": "Hexatombe",
+    "description": "Se o alvo olhar, testa Vontade; se evitar olhar, sofre desvantagem de 2d20 em testes e fica cego."
+  },
+  {
+    "name": "Bolsa do Sangue",
+    "element": "Sangue",
+    "season": "Hexatombe",
+    "description": "Recupera pontos de vida de um alvo utilizando o próprio sangue do conjurador."
+  },
+  {
+    "name": "Vínculo de Sangue",
+    "element": "Sangue",
+    "season": "Hexatombe",
+    "description": "Marca um símbolo emissor e outro receptor, compartilhando parte do dano sofrido entre os alvos vinculados."
+  },
+  {
+    "name": "Vampirismo",
+    "element": "Sangue",
+    "season": "Hexatombe",
+    "description": "Transforma um cadáver em banquete paranormal; quem consumir recebe memórias, bônus em ataques, PV ou habilidades."
+  },
+  {
+    "name": "Maldição Sanguínea",
+    "element": "Sangue",
+    "season": "Hexatombe",
+    "description": "Apodrece o sangue do alvo; se falhar em Fortitude, fica abalado e sofre -1d20 em testes pelo resto da cena."
+  },
+  {
+    "name": "Descarnar",
+    "element": "Sangue",
+    "season": "Clássico / Hexatombe",
+    "description": "Lacerações se manifestam no alvo causando 6d8 de dano de Sangue e hemorragia severa (2d8 por turno se falhar em Fortitude)."
+  },
+  {
+    "name": "Cicatrização",
+    "element": "Morte",
+    "season": "Clássico / Hexatombe",
+    "description": "Acelera o tempo nas feridas do alvo, curando 3d8+3 PV (ou ~20 PV em Discente), mas envelhecendo o alvo em 1 a 2 anos."
+  },
+  {
+    "name": "Perturbação",
+    "element": "Conhecimento",
+    "season": "Clássico / Hexatombe",
+    "description": "Dá uma ordem direta ao alvo; se falhar em Vontade, deve obedecer da melhor forma possível em seu turno."
+  },
+  {
+    "name": "Decadência",
+    "element": "Morte",
+    "season": "Clássico",
+    "description": "Espirais de trevas definham o alvo, causando 2d8+5 pontos de dano de Morte."
+  },
+  {
+    "name": "Velocidade Mortal",
+    "element": "Morte",
+    "season": "Clássico",
+    "description": "Distorce o tempo ao redor do alvo, concedendo uma ação de movimento adicional (ou padrão em Discente)."
+  },
+  {
+    "name": "Eletrocussão",
+    "element": "Energia",
+    "season": "Clássico",
+    "description": "Lança raios caóticos no alvo causando 3d6 de dano de Energia."
+  },
+  {
+    "name": "Tela de Ruído",
+    "element": "Energia",
+    "season": "Clássico",
+    "description": "Cria uma película que absorve energia cinética, fornecendo 30 PV temporários ou 15 de resistência como reação."
+  },
+  {
+    "name": "Cinerária",
+    "element": "Medo",
+    "secondaryElement": "Energia",
+    "season": "Clássico",
+    "description": "Invoca névoa paranormal em 6 metros que fortalece todos os rituais conjurados dentro da área."
+  },
+  {
+    "name": "Lâmina do Medo",
+    "element": "Medo",
+    "secondaryElement": "Morte",
+    "season": "Clássico",
+    "description": "Cria uma lâmina translúcida que ecoa uma melodia impossível e deixa o alvo morrendo ao perfurá-lo."
+  },
+  {
+    "name": "Dissipar Ritual",
+    "element": "Medo",
+    "season": "Livro de Regras",
+    "description": "Cancela os efeitos de rituais ativos em um alvo ou área."
+  },
+  {
+    "name": "Inexistir",
+    "element": "Conhecimento",
+    "season": "Desconjuração",
+    "description": "Causa dano massivo de sanidade ou faz o alvo desaparecer completamente do ar caso falhe na resistência."
+  },
+  {
+    "name": "Transcender",
+    "element": "Conhecimento",
+    "season": "Transcender",
+    "description": "Conecta o usuário ao Outro Lado sobre o símbolo para fortalecer-se e aprender novos rituais."
+  }
+]

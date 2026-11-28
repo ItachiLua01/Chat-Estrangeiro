@@ -6,6 +6,7 @@ import SocketIOClient, { Socket } from "socket.io-client";
 
 import styles from "../styles/Room.module.scss";
 import { CardId, ChoicePrompt, Message, RoomState } from "../types/message";
+import type { PlayerRecord } from "./api/players";
 
 const MASTER_USER = "DM";
 const MASTER_PASS = "DM";
@@ -193,6 +194,33 @@ const RoomPage: NextPage = () => {
   const [roomInput, setRoomInput] = useState("");
   const [moonFrom, setMoonFrom] = useState("6");
   const [moonTo, setMoonTo] = useState("5");
+  const [apkText, setApkText] = useState("");
+  const [showPlayersModal, setShowPlayersModal] = useState(false);
+  const [playersList, setPlayersList] = useState<PlayerRecord[]>([]);
+  const [editingPlayer, setEditingPlayer] = useState<PlayerRecord>({
+    username: "",
+    password: "",
+    characterName: "",
+    room: "juan",
+    story: "",
+    storyCensored: false,
+    photos: [],
+    audios: [],
+    resources: {
+      water: 1,
+      food: 1,
+      scrap: 0,
+      daysWithoutWater: 0,
+      daysWithoutFood: 0,
+      fortitudeFails: 0,
+      pvPenalty: 0,
+      pePenalty: 0,
+    },
+  });
+  const [newPhotoTitle, setNewPhotoTitle] = useState("");
+  const [newPhotoUrl, setNewPhotoUrl] = useState("");
+  const [newAudioTitle, setNewAudioTitle] = useState("");
+  const [newAudioUrl, setNewAudioUrl] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const strangerInputRef = useRef<HTMLInputElement | null>(null);
@@ -584,6 +612,45 @@ const RoomPage: NextPage = () => {
     }
   };
 
+  const loadPlayersAdmin = async () => {
+    try {
+      const res = await fetch("/api/players");
+      const data = await res.json();
+      setPlayersList(data.players || []);
+    } catch {}
+  };
+
+  const savePlayerAdmin = async () => {
+    if (!editingPlayer.username.trim()) return;
+    try {
+      const res = await fetch("/api/players", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "upsert", player: editingPlayer }),
+      });
+      const data = await res.json();
+      if (data.players) setPlayersList(data.players);
+    } catch {}
+  };
+
+  const deletePlayerAdmin = async (username: string) => {
+    try {
+      const res = await fetch("/api/players", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", username }),
+      });
+      const data = await res.json();
+      if (data.players) setPlayersList(data.players);
+    } catch {}
+  };
+
+  const handleSendApkText = (allRooms = true) => {
+    if (!apkText.trim()) return;
+    socket?.emit("triggerMacabraText", { text: apkText.trim(), allRooms });
+    setApkText("");
+  };
+
   const displayedCardId = localPreviewCard || activeCard;
   const currentCard = displayedCardId ? CARDS[displayedCardId] : null;
 
@@ -919,6 +986,34 @@ const RoomPage: NextPage = () => {
                       Lua
                     </button>
                   </div>
+                  <div className={styles.moonManualWrap}>
+                    <input
+                      type="text"
+                      value={apkText}
+                      onChange={(e) => setApkText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSendApkText(true)}
+                      placeholder="Texto APK..."
+                      className={styles.apkTextInput}
+                    />
+                    <button
+                      type="button"
+                      className={styles.ctrlBtn}
+                      onClick={() => handleSendApkText(true)}
+                      title="Mostrar texto neon em MACABRA_.TTF na tela do app Android"
+                    >
+                      Texto APK
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.ctrlBtn}
+                    onClick={() => {
+                      loadPlayersAdmin();
+                      setShowPlayersModal(true);
+                    }}
+                  >
+                    Jogadores
+                  </button>
                   <button
                     type="button"
                     className={styles.ctrlBtn}
@@ -1079,6 +1174,289 @@ const RoomPage: NextPage = () => {
                     Aguardando escolha do jogador...
                   </p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {showPlayersModal && (
+            <div
+              className={styles.indexOverlay}
+              onClick={() => setShowPlayersModal(false)}
+            >
+              <div
+                className={styles.playersAdminModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className={styles.indexTitle}>JOGADORES &amp; ARQUIVO PESSOAL</p>
+                <div className={styles.roomChips}>
+                  {playersList.map((p) => (
+                    <div key={p.username} className={styles.roomChipWrap}>
+                      <button
+                        type="button"
+                        className={styles.roomChipBtn}
+                        onClick={() => setEditingPlayer(p)}
+                      >
+                        {p.characterName || p.username}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.roomDeleteBtn}
+                        onClick={() => deletePlayerAdmin(p.username)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.ctrlBtn}
+                    onClick={() =>
+                      setEditingPlayer({
+                        username: "",
+                        password: "",
+                        characterName: "",
+                        room: "intencao",
+                        story: "",
+                        storyCensored: false,
+                        photos: [],
+                        audios: [],
+                        resources: {
+                          water: 1,
+                          food: 1,
+                          scrap: 0,
+                          daysWithoutWater: 0,
+                          daysWithoutFood: 0,
+                          fortitudeFails: 0,
+                          pvPenalty: 0,
+                          pePenalty: 0,
+                        },
+                      })
+                    }
+                  >
+                    + Novo
+                  </button>
+                </div>
+
+                <div className={styles.adminFormGrid}>
+                  <input
+                    type="text"
+                    placeholder="Usuário (login)"
+                    value={editingPlayer.username}
+                    onChange={(e) =>
+                      setEditingPlayer({ ...editingPlayer, username: e.target.value })
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Senha"
+                    value={editingPlayer.password}
+                    onChange={(e) =>
+                      setEditingPlayer({ ...editingPlayer, password: e.target.value })
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nome do Personagem"
+                    value={editingPlayer.characterName}
+                    onChange={(e) =>
+                      setEditingPlayer({
+                        ...editingPlayer,
+                        characterName: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Sala (ex: juan)"
+                    value={editingPlayer.room}
+                    onChange={(e) =>
+                      setEditingPlayer({ ...editingPlayer, room: e.target.value })
+                    }
+                  />
+                </div>
+
+                <textarea
+                  rows={3}
+                  className={styles.adminTextarea}
+                  placeholder="História / Dossiê do jogador..."
+                  value={editingPlayer.story}
+                  onChange={(e) =>
+                    setEditingPlayer({ ...editingPlayer, story: e.target.value })
+                  }
+                />
+
+                <label className={styles.adminCheck}>
+                  <input
+                    type="checkbox"
+                    checked={editingPlayer.storyCensored}
+                    onChange={(e) =>
+                      setEditingPlayer({
+                        ...editingPlayer,
+                        storyCensored: e.target.checked,
+                      })
+                    }
+                  />
+                  Censurar história no app
+                </label>
+
+                <div className={styles.adminSubBlock}>
+                  <p>Fotos ({editingPlayer.photos.length})</p>
+                  <div className={styles.adminInlineRow}>
+                    <input
+                      type="text"
+                      placeholder="Título foto"
+                      value={newPhotoTitle}
+                      onChange={(e) => setNewPhotoTitle(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="URL da foto (ex: /foto.png)"
+                      value={newPhotoUrl}
+                      onChange={(e) => setNewPhotoUrl(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={styles.ctrlBtn}
+                      onClick={() => {
+                        if (!newPhotoUrl.trim()) return;
+                        setEditingPlayer({
+                          ...editingPlayer,
+                          photos: [
+                            ...editingPlayer.photos,
+                            {
+                              id: String(Date.now()),
+                              title: newPhotoTitle.trim() || "Foto",
+                              url: newPhotoUrl.trim(),
+                              blurred: false,
+                            },
+                          ],
+                        });
+                        setNewPhotoTitle("");
+                        setNewPhotoUrl("");
+                      }}
+                    >
+                      + Foto
+                    </button>
+                  </div>
+                  {editingPlayer.photos.map((ph, idx) => (
+                    <div key={ph.id} className={styles.adminItemRow}>
+                      <span>{ph.title}</span>
+                      <button
+                        type="button"
+                        className={`${styles.ctrlBtn} ${
+                          ph.blurred ? styles.ctrlBtnActive : ""
+                        }`}
+                        onClick={() => {
+                          const next = [...editingPlayer.photos];
+                          next[idx] = { ...ph, blurred: !ph.blurred };
+                          setEditingPlayer({ ...editingPlayer, photos: next });
+                        }}
+                      >
+                        {ph.blurred ? "Blur: ON" : "Blur: OFF"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.ctrlBtn}
+                        onClick={() =>
+                          setEditingPlayer({
+                            ...editingPlayer,
+                            photos: editingPlayer.photos.filter((_, i) => i !== idx),
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.adminSubBlock}>
+                  <p>Áudios ({editingPlayer.audios.length})</p>
+                  <div className={styles.adminInlineRow}>
+                    <input
+                      type="text"
+                      placeholder="Título áudio"
+                      value={newAudioTitle}
+                      onChange={(e) => setNewAudioTitle(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="URL do áudio (ex: /audio.mp3)"
+                      value={newAudioUrl}
+                      onChange={(e) => setNewAudioUrl(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={styles.ctrlBtn}
+                      onClick={() => {
+                        if (!newAudioUrl.trim()) return;
+                        setEditingPlayer({
+                          ...editingPlayer,
+                          audios: [
+                            ...editingPlayer.audios,
+                            {
+                              id: String(Date.now()),
+                              title: newAudioTitle.trim() || "Áudio",
+                              url: newAudioUrl.trim(),
+                              locked: false,
+                            },
+                          ],
+                        });
+                        setNewAudioTitle("");
+                        setNewAudioUrl("");
+                      }}
+                    >
+                      + Áudio
+                    </button>
+                  </div>
+                  {editingPlayer.audios.map((au, idx) => (
+                    <div key={au.id} className={styles.adminItemRow}>
+                      <span>{au.title}</span>
+                      <button
+                        type="button"
+                        className={`${styles.ctrlBtn} ${
+                          au.locked ? styles.ctrlBtnActive : ""
+                        }`}
+                        onClick={() => {
+                          const next = [...editingPlayer.audios];
+                          next[idx] = { ...au, locked: !au.locked };
+                          setEditingPlayer({ ...editingPlayer, audios: next });
+                        }}
+                      >
+                        {au.locked ? "Travado" : "Liberado"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.ctrlBtn}
+                        onClick={() =>
+                          setEditingPlayer({
+                            ...editingPlayer,
+                            audios: editingPlayer.audios.filter((_, i) => i !== idx),
+                          })
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.adminInlineRow}>
+                  <button
+                    type="button"
+                    className={styles.closeCardBtn}
+                    onClick={savePlayerAdmin}
+                  >
+                    Salvar &amp; Sincronizar
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.closeCardBtn}
+                    onClick={() => setShowPlayersModal(false)}
+                  >
+                    Fechar
+                  </button>
+                </div>
               </div>
             </div>
           )}

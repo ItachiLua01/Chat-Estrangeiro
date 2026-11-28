@@ -125,6 +125,14 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         io.to(room).emit("stopInvasion");
       });
 
+      socket.on("triggerMacabraText", (payload: { text: string; allRooms?: boolean }) => {
+        if (payload.allRooms) {
+          io.emit("macabraText", { text: payload.text });
+        } else {
+          io.to(room).emit("macabraText", { text: payload.text });
+        }
+      });
+
       socket.on("triggerBloodMoon", (payload: { from: string; to: string }) => {
         io.emit("bloodMoon", payload);
       });

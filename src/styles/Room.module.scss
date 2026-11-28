@@ -936,3 +936,105 @@ span.indexQuestion {
     color: #ffd24d;
     text-shadow: 0 0 14px rgba(255, 200, 40, 0.8);
 }
+
+input.apkTextInput {
+    width: 110px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #f5e6e6;
+    background: rgba(15, 0, 0, 0.8);
+    border: 1px solid rgba(196, 30, 58, 0.45);
+    border-radius: 3px;
+}
+
+div.playersAdminModal {
+    width: min(94vw, 660px);
+    max-height: 88dvh;
+    overflow-y: auto;
+    padding: clamp(16px, 3vw, 28px);
+    border-radius: 16px;
+    background: rgba(16, 4, 4, 0.96);
+    border: 1px solid #C41E3A;
+    box-shadow: 0 0 32px rgba(196, 30, 58, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+div.adminFormGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+
+    input {
+        padding: 7px 10px;
+        font-size: 13px;
+        color: #f5e6e6;
+        background: rgba(28, 0, 0, 0.8);
+        border: 1px solid rgba(196, 30, 58, 0.45);
+        border-radius: 4px;
+    }
+}
+
+textarea.adminTextarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    color: #f5e6e6;
+    background: rgba(28, 0, 0, 0.8);
+    border: 1px solid rgba(196, 30, 58, 0.45);
+    border-radius: 4px;
+    resize: vertical;
+}
+
+label.adminCheck {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #f0caca;
+}
+
+div.adminSubBlock {
+    padding: 10px;
+    background: rgba(25, 0, 0, 0.55);
+    border: 1px solid rgba(196, 30, 58, 0.3);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    > p {
+        font-size: 13px;
+        color: #ff8a8a;
+    }
+}
+
+div.adminInlineRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    input {
+        flex: 1 1 120px;
+        padding: 6px 8px;
+        font-size: 12px;
+        color: #f5e6e6;
+        background: rgba(15, 0, 0, 0.8);
+        border: 1px solid rgba(196, 30, 58, 0.4);
+        border-radius: 3px;
+    }
+}
+
+div.adminItemRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #f5e6e6;
+
+    span {
+        flex: 1;
+    }
+}

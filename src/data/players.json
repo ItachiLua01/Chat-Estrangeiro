@@ -1,0 +1,24 @@
+{
+  "players": [
+    {
+      "username": "juan",
+      "password": "123",
+      "characterName": "Juan (Henri)",
+      "room": "juan",
+      "story": "Você não se lembra de tudo antes do despertar, apenas do calor do sangue e de uma voz que nunca se cala.",
+      "storyCensored": false,
+      "photos": [],
+      "audios": [],
+      "resources": {
+        "water": 1,
+        "food": 1,
+        "scrap": 0,
+        "daysWithoutWater": 0,
+        "daysWithoutFood": 0,
+        "fortitudeFails": 0,
+        "pvPenalty": 0,
+        "pePenalty": 0
+      }
+    }
+  ]
+}
