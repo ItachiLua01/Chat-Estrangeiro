@@ -2,6 +2,7 @@ import type { NextApiRequest } from "next";
 import fs from "fs";
 import path from "path";
 import { NextApiResponseServerIO } from "../../types/next";
+import { loadExternalState, saveExternalState } from "../../lib/persistence";
 
 export interface DossierPhoto {
   id: string;
@@ -44,9 +45,18 @@ const DATA_FILE = path.join(process.cwd(), "src", "data", "players.json");
 
 const globalPlayers = globalThis as unknown as {
   hexatombePlayers?: PlayerRecord[];
+  hexatombePlayersLoadedExt?: boolean;
 };
 
-function loadPlayers(): PlayerRecord[] {
+async function loadPlayers(): Promise<PlayerRecord[]> {
+  if (!globalPlayers.hexatombePlayersLoadedExt) {
+    globalPlayers.hexatombePlayersLoadedExt = true;
+    const ext = await loadExternalState<PlayerRecord[]>("hexatombe_players");
+    if (ext && Array.isArray(ext)) {
+      globalPlayers.hexatombePlayers = ext;
+      return ext;
+    }
+  }
   if (globalPlayers.hexatombePlayers) return globalPlayers.hexatombePlayers;
   try {
     const raw = fs.readFileSync(DATA_FILE, "utf-8");
@@ -66,16 +76,15 @@ function savePlayers(players: PlayerRecord[]) {
       JSON.stringify({ players }, null, 2),
       "utf-8"
     );
-  } catch {
-    // Em ambientes read-only, mantém em memória
-  }
+  } catch {}
+  saveExternalState("hexatombe_players", players);
 }
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponseServerIO
 ) {
-  const players = loadPlayers();
+  const players = await loadPlayers();
 
   if (req.method === "GET") {
     const { username } = req.query;
@@ -137,6 +146,10 @@ export default function handler(
       if (idx < 0) return res.status(404).json({ error: "Jogador não encontrado" });
       players[idx].resources = body.resources;
       savePlayers(players);
+      res.socket?.server?.io?.emit("resourcesUpdated", {
+        username: players[idx].username,
+        resources: body.resources,
+      });
       return res.status(200).json({ player: players[idx] });
     }
 

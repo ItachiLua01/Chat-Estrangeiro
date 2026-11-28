@@ -7,6 +7,7 @@ import SocketIOClient, { Socket } from "socket.io-client";
 import styles from "../styles/Room.module.scss";
 import { CardId, ChoicePrompt, Message, RoomState } from "../types/message";
 import type { PlayerRecord } from "./api/players";
+import type { BaseUpgradeState } from "./api/socketio";
 
 const MASTER_USER = "DM";
 const MASTER_PASS = "DM";
@@ -49,6 +50,22 @@ const CARDS: Record<CardId, CardDefinition> = {
     description:
       "Um lampejo atravessa o véu: mãos cobertas de sangue que não parecem suas, um nome sussurrado antes do ritual e a certeza de que este corpo já matou antes de você acordar nele.",
   },
+};
+
+
+const BASE_META: Record<string, { name: string; cost: string; secret?: boolean }> = {
+  limpeza: { name: "Limpeza da base", cost: "0 sucata" },
+  filtro_agua: { name: "Filtro de água", cost: "1 sucata" },
+  geladeira: { name: "Geladeira", cost: "1 sucata" },
+  camas: { name: "Camas", cost: "1 sucata" },
+  casa_arvore: { name: "Casa na árvore", cost: "2 sucata" },
+  defesas: { name: "Defesas externas", cost: "1 sucata" },
+  academia: { name: "Academia", cost: "1 sucata" },
+  enfermaria: { name: "Enfermaria improvisada", cost: "Materiais", secret: true },
+  biblioteca: { name: "Biblioteca do Pomba", cost: "Documentos", secret: true },
+  sala_musica: { name: "Sala de música", cost: "Psikolera", secret: true },
+  adega_vinho: { name: "Adega de vinho", cost: "Vampiros", secret: true },
+  garagem: { name: "Garagem", cost: "Couraças", secret: true },
 };
 
 interface MessageRowProps {
@@ -195,6 +212,12 @@ const RoomPage: NextPage = () => {
   const [moonFrom, setMoonFrom] = useState("6");
   const [moonTo, setMoonTo] = useState("5");
   const [apkText, setApkText] = useState("");
+  const [enteredLink, setEnteredLink] = useState(false);
+  const [masterTyping, setMasterTyping] = useState(false);
+  const [presenceUsers, setPresenceUsers] = useState<string[]>([]);
+  const [baseState, setBaseState] = useState<BaseUpgradeState[]>([]);
+  const [showBaseModal, setShowBaseModal] = useState(false);
+  const masterTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showPlayersModal, setShowPlayersModal] = useState(false);
   const [playersList, setPlayersList] = useState<PlayerRecord[]>([]);
   const [editingPlayer, setEditingPlayer] = useState<PlayerRecord>({
@@ -389,6 +412,39 @@ const RoomPage: NextPage = () => {
     io.on("connect", () => {
       setSocket(io);
       io.emit("requestRoomsList");
+      io.emit("requestBaseState");
+      io.emit("identifyPresence", { name: roomStr, isMaster: isStrangerRef.current });
+    });
+
+    io.on("roomPresence", (p: { room: string; count: number; users: string[] }) => {
+      if (p.room === roomStr) {
+        setPresenceUsers(p.users || []);
+      }
+    });
+
+    io.on("masterTyping", (typing: boolean) => {
+      if (!isStrangerRef.current) {
+        setMasterTyping(typing);
+      }
+    });
+
+    io.on("baseState", (nextBase: BaseUpgradeState[]) => {
+      setBaseState(nextBase || []);
+    });
+
+    io.on("resourcesUpdated", (payload: { username: string; resources: any }) => {
+      setPlayersList((prev) =>
+        prev.map((pl) =>
+          pl.username.toLowerCase() === payload.username.toLowerCase()
+            ? { ...pl, resources: payload.resources }
+            : pl
+        )
+      );
+      setEditingPlayer((prev) =>
+        prev.username.toLowerCase() === payload.username.toLowerCase()
+          ? { ...prev, resources: payload.resources }
+          : prev
+      );
     });
 
     io.on("roomState", (state: RoomState) => {
@@ -491,7 +547,9 @@ const RoomPage: NextPage = () => {
     if (loginUser === MASTER_USER && loginPass === MASTER_PASS) {
       setMasterMode(true);
       setShowLogin(false);
+      setEnteredLink(true);
       socket?.emit("requestRoomsList");
+      socket?.emit("identifyPresence", { name: "Mestre", isMaster: true });
     } else {
       setError(true);
     }
@@ -528,6 +586,7 @@ const RoomPage: NextPage = () => {
       }
 
       setStrangerMessage("");
+      socket?.emit("masterTyping", false);
       setEphemeralNext(false);
       setMutateMode(false);
     } else {
@@ -645,6 +704,71 @@ const RoomPage: NextPage = () => {
     } catch {}
   };
 
+  const uploadMediaFile = async (
+    file: File,
+    onDone: (url: string) => void
+  ) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            dataUrl: reader.result,
+          }),
+        });
+        const data = await res.json();
+        if (data.url) onDone(data.url);
+      } catch {}
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleExportLog = () => {
+    const data = {
+      room,
+      exportedAt: new Date().toISOString(),
+      messages,
+      unlockedCards,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hexatombe-${room || "sala"}-log.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportLog = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || "{}"));
+        socket?.emit("importRoomLog", {
+          messages: parsed.messages || [],
+          unlockedCards: parsed.unlockedCards || [],
+        });
+      } catch {}
+    };
+    reader.readAsText(file);
+  };
+
+  const handleStrangerInputChange = (val: string) => {
+    setStrangerMessage(val);
+    socket?.emit("masterTyping", val.length > 0);
+    if (masterTypingTimerRef.current) clearTimeout(masterTypingTimerRef.current);
+    if (val.length > 0) {
+      masterTypingTimerRef.current = setTimeout(() => {
+        socket?.emit("masterTyping", false);
+      }, 2400);
+    }
+  };
+
   const handleSendApkText = (allRooms = true) => {
     if (!apkText.trim()) return;
     socket?.emit("triggerMacabraText", { text: apkText.trim(), allRooms });
@@ -683,6 +807,30 @@ const RoomPage: NextPage = () => {
           />
           <p className="text-glow">Conectando</p>
         </div>
+      ) : !isStranger && !enteredLink ? (
+        <div className={styles.vinculoGate}>
+          <svg
+            viewBox="0 0 200 200"
+            className={styles.pactoSigilNeon}
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="100" cy="100" r="88" stroke="#FF4242" strokeWidth="3.5" />
+            <circle cx="100" cy="100" r="72" stroke="#FF5E5E" strokeWidth="1.5" strokeDasharray="6 6" />
+            <path d="M100 22 L100 178" stroke="#FF3B3B" strokeWidth="6" strokeLinecap="round" />
+            <path d="M64 76 L136 76" stroke="#FF3B3B" strokeWidth="5" strokeLinecap="round" />
+            <path d="M52 132 L148 132" stroke="#FF3B3B" strokeWidth="5" strokeLinecap="round" />
+            <path d="M100 22 L82 44 M100 22 L118 44" stroke="#FF5E5E" strokeWidth="3.5" strokeLinecap="round" />
+            <circle cx="100" cy="100" r="18" stroke="#FF5E5E" strokeWidth="2.5" />
+          </svg>
+          <button
+            type="button"
+            className={styles.vinculoBtn}
+            onClick={() => setEnteredLink(true)}
+          >
+            Acessar Vínculo
+          </button>
+        </div>
       ) : (
         <section
           className={`${styles.program} ${
@@ -705,6 +853,20 @@ const RoomPage: NextPage = () => {
           {isStranger && (
             <div className={styles.masterTopBar}>
               <span className={styles.masterTag}>MESTRE · SALA: {room}</span>
+              <span
+                className={`${styles.presenceBadge} ${
+                  presenceUsers.length > 0 ? styles.presenceOnline : styles.presenceOffline
+                }`}
+                title={
+                  presenceUsers.length > 0
+                    ? `Conectados: ${presenceUsers.join(", ")}`
+                    : "Nenhum jogador conectado nesta sala"
+                }
+              >
+                {presenceUsers.length > 0
+                  ? `● Online (${presenceUsers.length})`
+                  : "○ Offline"}
+              </span>
               <div className={styles.roomChips}>
                 {Array.from(
                   new Set([...knownRooms, String(room || "intencao")])
@@ -782,6 +944,12 @@ const RoomPage: NextPage = () => {
                   {liveTyping}
                   <span className={styles.typingCursor}>_</span>
                 </p>
+              </div>
+            )}
+
+            {!isStranger && masterTyping && (
+              <div className={styles.algoResponde}>
+                <p>Algo responde seu chamado...</p>
               </div>
             )}
 
@@ -873,7 +1041,7 @@ const RoomPage: NextPage = () => {
                         : "Falar na mente do jogador... (use || para mutar texto)"
                     }
                     value={strangerMessage}
-                    onChange={(e) => setStrangerMessage(e.target.value)}
+                    onChange={(e) => handleStrangerInputChange(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") sendMessage(false);
                     }}
@@ -1014,6 +1182,33 @@ const RoomPage: NextPage = () => {
                   >
                     Jogadores
                   </button>
+                  <button
+                    type="button"
+                    className={styles.ctrlBtn}
+                    onClick={() => setShowBaseModal(true)}
+                  >
+                    Base
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.ctrlBtn}
+                    onClick={handleExportLog}
+                  >
+                    Exportar Log
+                  </button>
+                  <label className={styles.ctrlBtnLabel}>
+                    Importar Log
+                    <input
+                      type="file"
+                      accept=".json"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleImportLog(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                   <button
                     type="button"
                     className={styles.ctrlBtn}
@@ -1178,6 +1373,67 @@ const RoomPage: NextPage = () => {
             </div>
           )}
 
+          {showBaseModal && (
+            <div
+              className={styles.indexOverlay}
+              onClick={() => setShowBaseModal(false)}
+            >
+              <div
+                className={styles.playersAdminModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className={styles.indexTitle}>GESTÃO DA BASE</p>
+                {baseState.map((item, idx) => {
+                  const meta = BASE_META[item.id] || { name: item.id, cost: "" };
+                  return (
+                    <div key={item.id} className={styles.adminItemRow}>
+                      <span>
+                        {meta.name} ({meta.cost})
+                      </span>
+                      {meta.secret && (
+                        <button
+                          type="button"
+                          className={`${styles.ctrlBtn} ${
+                            item.discovered ? styles.ctrlBtnActive : ""
+                          }`}
+                          onClick={() => {
+                            const next = [...baseState];
+                            next[idx] = { ...item, discovered: !item.discovered };
+                            setBaseState(next);
+                            socket?.emit("updateBaseState", next);
+                          }}
+                        >
+                          {item.discovered ? "Descoberta" : "Oculta (?)"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`${styles.ctrlBtn} ${
+                          item.built ? styles.ctrlBtnActive : ""
+                        }`}
+                        onClick={() => {
+                          const next = [...baseState];
+                          next[idx] = { ...item, built: !item.built };
+                          setBaseState(next);
+                          socket?.emit("updateBaseState", next);
+                        }}
+                      >
+                        {item.built ? "Construída" : "Não construída"}
+                      </button>
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  className={styles.closeCardBtn}
+                  onClick={() => setShowBaseModal(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+
           {showPlayersModal && (
             <div
               className={styles.indexOverlay}
@@ -1275,15 +1531,42 @@ const RoomPage: NextPage = () => {
                   />
                 </div>
 
+                <div className={styles.adminInlineRow}>
+                  <button
+                    type="button"
+                    className={styles.ctrlBtn}
+                    onClick={() =>
+                      setEditingPlayer({
+                        ...editingPlayer,
+                        story: editingPlayer.story + " ||trecho censurado|| ",
+                      })
+                    }
+                  >
+                    + Censurar Trecho (||...||)
+                  </button>
+                </div>
                 <textarea
                   rows={3}
                   className={styles.adminTextarea}
-                  placeholder="História / Dossiê do jogador..."
+                  placeholder="História / Dossiê (use ||texto|| para censurar apenas um trecho)..."
                   value={editingPlayer.story}
                   onChange={(e) =>
                     setEditingPlayer({ ...editingPlayer, story: e.target.value })
                   }
                 />
+                {editingPlayer.username && (
+                  <div className={styles.adminResourcesBox}>
+                    <span>Recursos ({editingPlayer.characterName || editingPlayer.username}):</span>
+                    <span>
+                      Água: {editingPlayer.resources?.water ?? 0} | Comida:{" "}
+                      {editingPlayer.resources?.food ?? 0} | Sucata:{" "}
+                      {editingPlayer.resources?.scrap ?? 0} | PV -
+                      {editingPlayer.resources?.pvPenalty ?? 0} | PD -
+                      {editingPlayer.resources?.pePenalty ?? 0} | Fortitude Falhas:{" "}
+                      {editingPlayer.resources?.fortitudeFails ?? 0}
+                    </span>
+                  </div>
+                )}
 
                 <label className={styles.adminCheck}>
                   <input
@@ -1310,10 +1593,22 @@ const RoomPage: NextPage = () => {
                     />
                     <input
                       type="text"
-                      placeholder="URL da foto (ex: /foto.png)"
+                      placeholder="URL da foto (ou envie arquivo)"
                       value={newPhotoUrl}
                       onChange={(e) => setNewPhotoUrl(e.target.value)}
                     />
+                    <label className={styles.ctrlBtnLabel}>
+                      Upload Foto
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadMediaFile(f, (url) => setNewPhotoUrl(url));
+                        }}
+                      />
+                    </label>
                     <button
                       type="button"
                       className={styles.ctrlBtn}
@@ -1381,10 +1676,22 @@ const RoomPage: NextPage = () => {
                     />
                     <input
                       type="text"
-                      placeholder="URL do áudio (ex: /audio.mp3)"
+                      placeholder="URL do áudio (ou envie arquivo)"
                       value={newAudioUrl}
                       onChange={(e) => setNewAudioUrl(e.target.value)}
                     />
+                    <label className={styles.ctrlBtnLabel}>
+                      Upload Áudio
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) uploadMediaFile(f, (url) => setNewAudioUrl(url));
+                        }}
+                      />
+                    </label>
                     <button
                       type="button"
                       className={styles.ctrlBtn}
