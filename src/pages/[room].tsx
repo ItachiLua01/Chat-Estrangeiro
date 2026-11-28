@@ -155,7 +155,8 @@ interface ChoiceLog {
 
 const RoomPage: NextPage = () => {
   const router = useRouter();
-  const { room, stranger } = router.query;
+  const { room, stranger, user } = router.query;
+  const userStr = Array.isArray(user) ? user[0] : user;
 
   const [masterMode, setMasterMode] = useState(false);
   const isStranger = !!stranger || masterMode;
@@ -413,7 +414,7 @@ const RoomPage: NextPage = () => {
       setSocket(io);
       io.emit("requestRoomsList");
       io.emit("requestBaseState");
-      io.emit("identifyPresence", { name: roomStr, isMaster: isStrangerRef.current });
+      io.emit("identifyPresence", { name: userStr || `Web (${roomStr})`, isMaster: isStrangerRef.current });
     });
 
     io.on("roomPresence", (p: { room: string; count: number; users: string[] }) => {
@@ -809,20 +810,11 @@ const RoomPage: NextPage = () => {
         </div>
       ) : !isStranger && !enteredLink ? (
         <div className={styles.vinculoGate}>
-          <svg
-            viewBox="0 0 200 200"
+          <img
+            src="/pacto-diabo.png"
+            alt="Símbolo do Pacto do Diabo"
             className={styles.pactoSigilNeon}
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="100" cy="100" r="88" stroke="#FF4242" strokeWidth="3.5" />
-            <circle cx="100" cy="100" r="72" stroke="#FF5E5E" strokeWidth="1.5" strokeDasharray="6 6" />
-            <path d="M100 22 L100 178" stroke="#FF3B3B" strokeWidth="6" strokeLinecap="round" />
-            <path d="M64 76 L136 76" stroke="#FF3B3B" strokeWidth="5" strokeLinecap="round" />
-            <path d="M52 132 L148 132" stroke="#FF3B3B" strokeWidth="5" strokeLinecap="round" />
-            <path d="M100 22 L82 44 M100 22 L118 44" stroke="#FF5E5E" strokeWidth="3.5" strokeLinecap="round" />
-            <circle cx="100" cy="100" r="18" stroke="#FF5E5E" strokeWidth="2.5" />
-          </svg>
+          />
           <button
             type="button"
             className={styles.vinculoBtn}
