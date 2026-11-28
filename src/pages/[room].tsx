@@ -183,6 +183,7 @@ const RoomPage: NextPage = () => {
   // Salas para o mestre alternar sem abrir várias abas
   const [knownRooms, setKnownRooms] = useState<string[]>([]);
   const [roomInput, setRoomInput] = useState("");
+  const [moonCount, setMoonCount] = useState(6);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const strangerInputRef = useRef<HTMLInputElement | null>(null);
@@ -821,6 +822,21 @@ const RoomPage: NextPage = () => {
                     title="Enviar o texto atual para todas as salas ativas"
                   >
                     Todas Salas
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.ctrlBtn}
+                    onClick={() => {
+                      const next = Math.max(0, moonCount - 1);
+                      socket?.emit("triggerBloodMoon", {
+                        from: String(moonCount),
+                        to: String(next),
+                      });
+                      setMoonCount(next);
+                    }}
+                    title="Disparar overlay da Lua de Sangue nos tablets Android"
+                  >
+                    Lua ({moonCount}→{Math.max(0, moonCount - 1)})
                   </button>
                   <button
                     type="button"

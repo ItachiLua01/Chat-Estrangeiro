@@ -117,6 +117,10 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
         io.to(room).emit("stopInvasion");
       });
 
+      socket.on("triggerBloodMoon", (payload: { from: string; to: string }) => {
+        io.emit("bloodMoon", payload);
+      });
+
       socket.on("resetFirstScream", () => {
         io.to(room).emit("resetFirstScream");
       });
